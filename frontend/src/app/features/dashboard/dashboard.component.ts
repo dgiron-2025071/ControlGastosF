@@ -83,6 +83,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       this.currentMonth = this.store.month();
       this.loadDashboard();
     });
+
+    // Carga inicial garantizada al entrar a Inicio: no depende de que
+    // refresh$ emita un evento, así el total de pasivos/activos llega al día
+    // aunque se haya pagado algo desde otra página (Pasivos, Pendientes...).
+    this.loadDashboard();
   }
 
   ngAfterViewInit(): void {
@@ -204,9 +209,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       (canvas as any).getContext("experimental-webgl");
     if (!gl) return;
 
+    const MAX_W = 360;
     const syncSize = () => {
-      const w = canvas.clientWidth || 1280;
-      const h = canvas.clientHeight || 720;
+      const cw = canvas.clientWidth || 1280;
+      const ch = canvas.clientHeight || 720;
+      const scale = Math.min(1, MAX_W / Math.max(cw, 1));
+      const w = Math.max(1, Math.round(cw * scale));
+      const h = Math.max(1, Math.round(ch * scale));
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -299,19 +308,29 @@ void main() {
     const uTime = gl.getUniformLocation(program, "u_time");
     const uRes = gl.getUniformLocation(program, "u_resolution");
 
-    const startTime = performance.now();
-
-    const render = (t: number) => {
+// Fondo estático: el shader se dibuja una sola vez. Sin bucle de
+    // animación continuo no se acumula carga de GPU (WebGL + backdrop-filter)
+    // y la aplicación no puede congelarse por el efecto de fondo.
+    const paint = () => {
       syncSize();
       gl.viewport(0, 0, canvas.width, canvas.height);
-      if (uTime) gl.uniform1f(uTime, t * 0.001);
+      if (uTime) gl.uniform1f(uTime, performance.now() * 0.001);
       if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      this.animFrameId = requestAnimationFrame(render);
     };
 
-    this.ngZone.runOutsideAngular(() => {
-      render(startTime);
-    });
+    if (typeof ResizeObserver !== "undefined") {
+      let pending = false;
+      new ResizeObserver(() => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(() => {
+          pending = false;
+          paint();
+        });
+      }).observe(canvas);
+    }
+
+    paint();
   }
 }
