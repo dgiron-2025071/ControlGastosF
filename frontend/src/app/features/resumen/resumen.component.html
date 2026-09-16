@@ -4,7 +4,7 @@
   <header class="res-header">
     <div class="res-header-inner">
       <div class="res-brand">
-        <span class="res-logo">Control-Gastos</span>
+        <span class="res-logo logo-logout" (click)="logout()">Control-Gastos</span>
       </div>
 
       <nav class="res-nav">
@@ -67,6 +67,13 @@
                 [class.negative]="balanceAnio(currentYear) < 0">
             {{ balanceAnio(currentYear) >= 0 ? '+' : '' }}{{ formatCurrency(balanceAnio(currentYear)) }}
           </span>
+        </div>
+        <div class="overview-card">
+          <span class="overview-label">Mayor pendiente del mes ({{ monthLabel }})</span>
+          <span class="overview-value">
+            {{ mayorPendienteMes() ? formatCurrency(mayorPendienteMes()!.monto) : '—' }}
+          </span>
+          <span class="overview-desc">{{ mayorPendienteMes()?.nombre ?? 'Sin pendientes en el mes' }}</span>
         </div>
       </section>
 
