@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { AuthService, AuthError } from "../services/auth.service";
+import { googleAuthService, GoogleAuthError } from "../services/google-auth.service";
 import { AuthenticatedRequest } from "../../../middlewares/auth.middleware";
 
 const authService = new AuthService();
@@ -42,11 +43,22 @@ export class AuthController {
       handleError(error, res);
     }
   }
+
+  async googleLogin(req: Request, res: Response): Promise<void> {
+    try {
+      const { idToken } = req.body;
+      const { token, user } = await googleAuthService.loginWithGoogle(idToken);
+      res.status(200).json({ token, user });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
 }
 
 function handleError(error: unknown, res: Response): void {
-  if (error instanceof AuthError) {
-    res.status(error.status).json({ message: error.message });
+  if (error instanceof AuthError || error instanceof GoogleAuthError) {
+    const err = error as AuthError;
+    res.status((err as any).status || 500).json({ message: err.message });
     return;
   }
 
