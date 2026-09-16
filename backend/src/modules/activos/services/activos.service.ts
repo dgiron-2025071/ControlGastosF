@@ -86,6 +86,8 @@ export class ActivosService {
       throw new ActivoError("El monto debe ser un número mayor a 0.", 400);
     }
 
+    this.assertNotFutureDate(fecha);
+
     const result = await pool.query(
       `INSERT INTO activos (user_id, nombre, monto, categoria, empresa, descripcion, fecha)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -128,6 +130,8 @@ export class ActivosService {
     if (!Number.isFinite(monto) || monto <= 0) {
       throw new ActivoError("El monto debe ser un número mayor a 0.", 400);
     }
+
+    this.assertNotFutureDate(fecha);
 
     const result = await pool.query(
       `UPDATE activos
@@ -175,6 +179,14 @@ export class ActivosService {
     }
 
     return mapActivoRow(result.rows[0]);
+  }
+
+  /** Bloquea registros con fechas futuras (la fecha del sistema no puede superarse). */
+  private assertNotFutureDate(fecha: string): void {
+    const hoy = new Date().toISOString().slice(0, 10);
+    if (fecha && fecha > hoy) {
+      throw new ActivoError("No puede agregar el dato hasta que se cumpla la fecha deseada.", 400);
+    }
   }
 }
 
