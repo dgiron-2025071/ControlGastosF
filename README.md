@@ -257,3 +257,85 @@ Debe cargar la pantalla de login. Usar:
 - Los datos de la grafica del dashboard toman los ingresos de la tabla `activos` y los gastos de `movimientos` (tipo GASTO).
 - El store `FinanceStoreService` es la fuente unica de verdad para el mes/anio seleccionado. Cualquier cambio se refleja en Inicio, Activos y Resumen de inmediato via un Observable (`refresh$`).
 - El archivo `.env` **nunca** se sube al repositorio (esta en `.gitignore`). Solo se commitea `.env.example` con valores de ejemplo.
+
+---
+
+## Funcionalidades nuevas del sistema (explicadas para el cliente)
+
+La aplicacion ya no es solo ingresos y resumen: ahora tambien administra las deudas,
+las suscripciones y los pagos pendientes. Todo esta conectado entre si y con el Inicio.
+
+### Pasivos (deudas por pagar)
+- Registrar, editar y eliminar deudas con su categoria, el monto y la fecha de vencimiento.
+- Marcar una deuda como **pagada** cuando ya se cubrio.
+- La fecha de vencimiento **no permite fechas futuras**: solo hoy o dias anteriores, asi
+  se evita registrar deudas con fechas equivocadas.
+- Validacion de saldo: para marcar una deuda como pagada el sistema revisa primero que
+  haya fondos disponibles (activos menos las deudas pendientes). Si no hay saldo
+  suficiente, no permite el pago y muestra un aviso claro.
+- El total de pasivos que se ve en la tarjeta del **Inicio** se actualiza de inmediato
+  cuando se paga una deuda.
+
+### Suscripciones
+- Registrar suscripciones (streaming, servicios, etc.) con su costo ciclico (mensual,
+  trimestral, anual, etc.) y la fecha de renovacion.
+- Cambiar su estado (activa/cancelada) y editarlas desde la pantalla de Movimientos.
+- Al marcarlas como pagadas tambien se valida que haya fondos suficientes.
+
+### Pendientes
+- Registrar pendientes **recurrentes** (se repiten mes a mes) o **fijos** (se pagan una vez).
+- Marcar como pagado un pendiente y, si fue un error, revertir el pago.
+- Al pagar tambien se valida el saldo disponible.
+- El Inicio solo muestra el **siguiente** pendiente de cada concepto (un solo registro por
+  tipo), para no saturar la vista con meses repetidos.
+
+### Movimientos
+- Historial unificado de los ingresos, deudas, suscripciones y pendientes del mes
+  seleccionado, para ver todo el flujo de dinero en un solo lugar.
+
+---
+
+## Ultima ronda de mejoras (explicacion para el cliente)
+
+- **Se elimino el congelamiento de la aplicacion.** El fondo animado se redibuja una sola
+  vez al cargar y ya no se ejecuta en bucle continuo (antes consumia recursos graficos sin
+  cesar y podia dejar congelada la pantalla). Ahora la pagina responde fluida y no
+  agota la tarjeta grafica / bateria. Tambien se eliminaron animaciones infinitas de fondo
+  que seguian activas en algunas pantallas.
+- **Deudas sin fechas futuras.** El apartado de Pasivos (al crear y al editar) ya no admite
+  una fecha de vencimiento mayor a hoy.
+- **No se puede pagar sin saldo.** Pasivos y Suscripciones revisan los fondos antes de
+  marcar algo como pagado; si no alcanza, se muestra un mensaje y se cancelar el pago,
+  protegiendo que el balance no quede en negativo.
+- **Inicio conectado con el resto.** Al pagar una deuda o un pendiente, el total de Pasivos
+  de la tarjeta del Inicio queda actualizado de inmediato, y los pendientes del Inicio
+  muestran el siguiente vencimiento de cada concepto.
+- **Correccion de errores variados**: pagos de pendientes recurrentes, eliminacion de
+  grupos de pendientes completos, notificaciones de registro, edicion de pasivos (que
+  antes fallaba con error de servidor), total de activos/pasivos y el "mayor pendiente"
+  correcto en el Resumen.
+
+---
+
+## Endpoints de la API (modulos nuevos)
+
+| Metodo | Ruta | Descripcion | Protegido |
+|---|---|---|---|
+| GET | `/api/pasivos?year=&month=` | Listar pasivos del mes (y estadisticas) | Si |
+| GET | `/api/pasivos/categorias` | Categorias de pasivos disponibles | Si |
+| POST | `/api/pasivos` | Crear pasivo (fecha futura es rechazada) | Si |
+| PUT | `/api/pasivos/:id` | Actualizar pasivo (fecha futura es rechazada) | Si |
+| DELETE | `/api/pasivos/:id` | Eliminar pasivo | Si |
+| PATCH | `/api/pasivos/:id/pagar` | Marcar pasivo como pagado (valida fondos) | Si |
+| GET | `/api/suscripciones?year=&month=` | Listar suscripciones del mes | Si |
+| GET | `/api/suscripciones/ciclos` | Ciclos de suscripcion disponibles | Si |
+| POST | `/api/suscripciones` | Crear suscripcion | Si |
+| PUT | `/api/suscripciones/:id` | Actualizar suscripcion | Si |
+| DELETE | `/api/suscripciones/:id` | Eliminar suscripcion | Si |
+| PATCH | `/api/suscripciones/:id/estado` | Cambiar estado (activa/cancelada) | Si |
+| GET | `/api/pendientes?year=&month=` | Listar pendientes del mes | Si |
+| POST | `/api/pendientes` | Crear pendiente (recurrente o fijo) | Si |
+| PATCH | `/api/pendientes/:id/pagar` | Marcar pendiente como pagado (valida fondos) | Si |
+| PATCH | `/api/pendientes/:id/revertir` | Revertir un pago | Si |
+| DELETE | `/api/pendientes/:id` | Eliminar pendiente (y su grupo recurrente) | Si |
+| GET | `/api/movimientos?year=&month=` | Movimientos del mes (ingresos y gastos) | Si |
