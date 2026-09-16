@@ -1,0 +1,391 @@
+<div class="pendientes-shell">
+  <canvas class="shader-bg" id="pendientes-shader-canvas"></canvas>
+
+  <header class="pend-header">
+    <div class="pend-header-inner">
+      <div class="pend-brand">
+        <span class="pend-logo logo-logout" (click)="logout()">Control-Gastos</span>
+      </div>
+
+      <nav class="pend-nav">
+        <a class="nav-link" (click)="navigateTo('dashboard')">Inicio</a>
+        <a class="nav-link" (click)="navigateTo('activos')">Activos</a>
+        <a class="nav-link" (click)="navigateTo('pasivos')">Pasivos</a>
+        <a class="nav-link active">Pendientes</a>
+        <a class="nav-link" (click)="navigateTo('suscripciones')">Suscripciones</a>
+        <a class="nav-link" (click)="navigateTo('movimientos')">Movimientos</a>
+      </nav>
+
+      <div class="pend-actions">
+        <button class="btn-add" (click)="openCreateModal()">
+          <span class="icon-plus">+</span>
+          Pendiente
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="pend-main">
+    <header class="pend-title-row">
+      <div>
+        <h1 class="pend-title">Pendientes</h1>
+        <p class="pend-subtitle">Gestione sus gastos pendientes y suscripciones vencidas.</p>
+      </div>
+      <div class="month-selector">
+        <button class="month-btn" (click)="previousMonth()" aria-label="Mes anterior">
+          <span class="icon-xs">&lsaquo;</span>
+        </button>
+        <span class="month-label">{{ monthLabel }}</span>
+        <button class="month-btn" (click)="nextMonth()" aria-label="Mes siguiente">
+          <span class="icon-xs">&rsaquo;</span>
+        </button>
+      </div>
+    </header>
+
+    @if (loading()) {
+      <div class="loading-state">Cargando pendientes...</div>
+    }
+
+    @if (!loading()) {
+      <!-- Métricas -->
+      <section class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Total pendiente del mes</span>
+            <div class="metric-icon orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value">{{ formatCurrency(totalPendiente()) }}</div>
+          <div class="metric-desc">{{ totalCount() }} registro(s)</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Suscripciones pendientes</span>
+            <div class="metric-icon purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <line x1="2" y1="10" x2="22" y2="10" />
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value">{{ formatCurrency(totalSuscripciones()) }}</div>
+          <div class="metric-desc">Por suscripciones del mes</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Mayor pendiente del mes</span>
+            <div class="metric-icon red">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20M17 7H9.5a2.5 2.5 0 000 5h5a2.5 2.5 0 010 5H6" />
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value">
+            {{ mayorPendiente() ? formatCurrency(mayorPendiente()!.monto) : '—' }}
+          </div>
+          <div class="metric-desc">{{ mayorPendiente()?.nombre ?? 'Sin pendientes en el mes' }}</div>
+        </div>
+      </section>
+
+      <!-- Filtros -->
+      @if (showFilters()) {
+        <section class="filters-panel">
+          <div class="filter-field">
+            <label>Buscar</label>
+            <input type="text" placeholder="Nombre, categoría..."
+                   [value]="filters().texto"
+                   (input)="setFilter('texto', $any($event.target).value)" />
+          </div>
+          <div class="filter-field">
+            <label>Categoría</label>
+            <select [value]="filters().categoria" (change)="setFilter('categoria', $any($event.target).value)">
+              <option value="">Todas</option>
+              @for (cat of categorias; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-field">
+            <label>Frecuencia</label>
+            <select [value]="filters().frecuencia" (change)="setFilter('frecuencia', $any($event.target).value)">
+              <option value="">Todas</option>
+              @for (freq of frecuencias; track freq) {
+                <option [value]="freq">{{ freq }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-field">
+            <label>Origen</label>
+            <select [value]="filters().origen" (change)="setFilter('origen', $any($event.target).value)">
+              <option value="">Todos</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="SUSCRIPCION">Suscripción</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label>Estado</label>
+            <select [value]="filters().estado" (change)="setFilter('estado', $any($event.target).value)">
+              <option value="">Todos</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="VENCIDO">Vencido</option>
+              <option value="PAGADO">Pagado</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            @if (activeFilterCount() > 0) {
+              <button class="btn-clear-filters" (click)="clearFilters()">Limpiar filtros</button>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- Tabla -->
+      <section class="table-card">
+        <div class="table-head">
+          <h3 class="table-title">Registro de Pendientes</h3>
+          <button class="btn-filter" (click)="toggleFilters()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filtrar
+            @if (activeFilterCount() > 0) {
+              <span class="filter-badge">{{ activeFilterCount() }}</span>
+            }
+          </button>
+        </div>
+
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">F. Vencimiento</th>
+                <th scope="col">Nombre</th>
+                <th scope="col">Categoría</th>
+                <th scope="col">Frecuencia</th>
+                <th scope="col" class="text-right">Monto</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Origen</th>
+                <th scope="col" class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (filteredItems().length === 0) {
+                <tr>
+                  <td colspan="8" class="empty-cell">
+                    {{ items().length === 0 ? 'No hay pendientes registrados en este mes. Presiona "+ Pendiente" para agregar uno.' : 'Ningún pendiente coincide con los filtros aplicados.' }}
+                  </td>
+                </tr>
+              }
+              @for (item of filteredItems(); track item.id) {
+                <tr>
+                  <td class="cell-fecha">{{ formatFecha(item.fechaVencimiento) }}</td>
+                  <td class="cell-nombre">{{ item.nombre }}</td>
+                  <td>
+                    <span class="origen-badge" [class]="origenClass(item.categoria)">
+                      {{ item.categoria }}
+                    </span>
+                  </td>
+                  <td class="cell-frecuencia">{{ item.frecuencia }}</td>
+                  <td class="text-right cell-monto">{{ formatMonto(item.monto) }}</td>
+                  <td>
+                    <span class="estado-badge" [class]="estadoClass(item.estado)">
+                      {{ item.estado }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="origen-source-badge" [class]="origenBadgeClass(item.origen)">
+                      {{ item.origen === 'SUSCRIPCION' ? 'Suscripción' : 'Pendiente' }}
+                    </span>
+                    @if (item.tipo === 'RECORDATORIO') {
+                      <span class="origen-source-badge tipo-recordatorio">Recordatorio</span>
+                    }
+                    @if (item.fijo) {
+                      <span class="origen-source-badge tipo-fijo">Fijo</span>
+                    }
+                  </td>
+                  <td class="text-right">
+                    <div class="row-actions">
+                      @if (item.origen === 'PENDIENTE') {
+                        <button class="icon-btn delete"
+                                [disabled]="deletingIds.has(item.id)"
+                                (click)="deletePendiente(item)"
+                                title="Eliminar">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+                          </svg>
+                        </button>
+                      }
+                      @if (item.origen === 'PENDIENTE') {
+                        <button class="icon-btn pay"
+                                [disabled]="payingIds.has(item.id)"
+                                (click)="markPaid(item)"
+                                title="Marcar como pagado">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                      } @else {
+                        <button class="icon-btn pay"
+                                [disabled]="payingIds.has(item.id)"
+                                (click)="markPaid(item)"
+                                title="Marcar pagado">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          Mostrando {{ filteredItems().length }} de {{ items().length }} registro(s)
+          @if (activeFilterCount() > 0) {
+            <span class="footer-filtered">· filtrados</span>
+          }
+        </div>
+      </section>
+    }
+  </main>
+
+  <!-- Modal de nuevo pendiente -->
+  @if (showCreateModal()) {
+    <div class="modal-backdrop" (click)="closeCreateModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-head">
+          <h2 class="modal-title">Nuevo pendiente</h2>
+          <button class="icon-btn" (click)="closeCreateModal()" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="create-info">
+          Este registro se creará automáticamente como pasivo al marcarlo como pagado.
+        </div>
+
+        <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
+          <div class="modal-grid">
+            <div class="form-field full">
+              <label>Nombre *</label>
+              <input type="text" formControlName="nombre" placeholder="Ej. Pago de luz eléctrica" />
+            </div>
+            <div class="form-field">
+              <label>Tipo *</label>
+              <select formControlName="tipo">
+                <option value="MONTO_CONOCIDO">Monto conocido</option>
+                <option value="RECORDATORIO">Solo recordatorio</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Fecha vencimiento *</label>
+              <input type="date" formControlName="fechaVencimiento" />
+            </div>
+            @if (createForm.value.tipo === 'MONTO_CONOCIDO') {
+              <div class="form-field">
+                <label>Monto (Q) *</label>
+                <input type="number" min="0.01" step="0.01" formControlName="monto" placeholder="0.00" />
+              </div>
+            } @else {
+              <div class="form-field">
+                <label>Monto (Q)</label>
+                <input type="number" min="0.01" step="0.01" formControlName="monto" placeholder="Opcional" />
+              </div>
+            }
+            <div class="form-field">
+              <label>Categoría</label>
+              <select formControlName="categoria">
+                @for (cat of categorias; track cat) {
+                  <option [value]="cat">{{ cat }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Frecuencia</label>
+              <select formControlName="frecuencia">
+                @for (freq of frecuencias; track freq) {
+                  <option [value]="freq">{{ freq }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-field checkbox-field">
+              <label for="pend-fijo">Fijo</label>
+              <input id="pend-fijo" type="checkbox" formControlName="fijo" />
+              <span class="checkbox-hint">Se repite igual todos los meses</span>
+            </div>
+            <div class="form-field full">
+              <label>Descripción</label>
+              <input type="text" formControlName="descripcion" placeholder="Detalle adicional (opcional)" />
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-outline" (click)="closeCreateModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" [disabled]="saving() || createForm.invalid">
+              @if (saving()) {
+                <span class="spinner"></span>
+                Guardando...
+              } @else {
+                Registrar pendiente
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal de pago con monto (recordatorios) -->
+  @if (showPayModal() && payingItem()) {
+    <div class="modal-backdrop" (click)="closePayModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-head">
+          <h2 class="modal-title">Pagar: {{ payingItem()!.nombre }}</h2>
+          <button class="icon-btn" (click)="closePayModal()" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="create-info">
+          Este pendiente es solo un recordatorio. Ingresa el monto pagado para registrarlo como egreso (pasivo).
+        </div>
+
+        <form (ngSubmit)="confirmPagoConMonto()">
+          <div class="modal-grid">
+            <div class="form-field full">
+              <label>Monto pagado (Q) *</label>
+              <input type="number" min="0.01" step="0.01"
+                     [value]="payMonto()"
+                     (input)="payMonto.set($any($event.target).value)"
+                     placeholder="0.00" />
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-outline" (click)="closePayModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" [disabled]="saving() || !payMonto()">
+              Confirmar pago
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
