@@ -4,16 +4,16 @@
   <header class="act-header">
     <div class="act-header-inner">
       <div class="act-brand">
-        <span class="act-logo">Control-Gastos</span>
+        <span class="act-logo logo-logout" (click)="logout()">Control-Gastos</span>
       </div>
 
       <nav class="act-nav">
         <a class="nav-link" (click)="navigateTo('dashboard')">Inicio</a>
         <a class="nav-link active">Activos</a>
-        <a class="nav-link" (click)="navigateTo('proximamente')">Pasivos</a>
-        <a class="nav-link" (click)="navigateTo('proximamente')">Pendientes</a>
-        <a class="nav-link" (click)="navigateTo('proximamente')">Suscripciones</a>
-        <a class="nav-link" (click)="navigateTo('proximamente')">Movimientos</a>
+        <a class="nav-link" (click)="navigateTo('pasivos')">Pasivos</a>
+        <a class="nav-link" (click)="navigateTo('pendientes')">Pendientes</a>
+        <a class="nav-link" (click)="navigateTo('suscripciones')">Suscripciones</a>
+        <a class="nav-link" (click)="navigateTo('movimientos')">Movimientos</a>
       </nav>
 
       <div class="act-actions">
@@ -29,7 +29,7 @@
     <header class="act-title-row">
       <div>
         <h1 class="act-title">Ingresos</h1>
-        <p class="act-subtitle">Gestión detallada de tus fuentes de ingreso.</p>
+        <p class="act-subtitle">Gestión detallada de sus fuentes de ingreso.</p>
       </div>
       <div class="month-selector">
         <button class="month-btn" (click)="previousMonth()" aria-label="Mes anterior">
