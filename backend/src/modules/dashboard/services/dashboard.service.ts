@@ -53,7 +53,33 @@ export class DashboardService {
       });
     }
 
-    return { selectedYear: year, selectedMonth: month, years };
+    // Mayor pendiente del mes seleccionado (pendientes + suscripciones), usado
+    // por el Resumen para mostrar el dato con su nombre.
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0);
+
+    const mayorResult = await pool.query(
+      `(
+        SELECT nombre, monto FROM pendientes
+        WHERE user_id = $1 AND fecha_vencimiento >= $2 AND fecha_vencimiento <= $3 AND estado = 'PENDIENTE'
+        ORDER BY monto DESC LIMIT 1
+       )
+       UNION ALL
+       (
+        SELECT nombre, monto FROM suscripciones
+        WHERE user_id = $1 AND estado = 'ACTIVA'
+          AND proxima_renovacion >= $2 AND proxima_renovacion <= $3
+        ORDER BY monto DESC LIMIT 1
+       )
+       ORDER BY monto DESC LIMIT 1`,
+      [userId, monthStart, monthEnd]
+    );
+
+    const mayorPendiente = mayorResult.rows.length > 0
+      ? { nombre: mayorResult.rows[0].nombre, monto: Number(mayorResult.rows[0].monto) }
+      : null;
+
+    return { selectedYear: year, selectedMonth: month, years, mayorPendiente };
   }
 
   private async getSummary(userId: number, year: number, month: number) {
@@ -81,10 +107,17 @@ export class DashboardService {
     );
 
     const monthGastosResult = await pool.query(
-      `SELECT COALESCE(SUM(monto), 0)::numeric AS total
-       FROM movimientos
-       WHERE user_id = $1 AND tipo = 'GASTO'
-         AND fecha >= $2 AND fecha <= $3`,
+      `SELECT
+         (
+           (SELECT COALESCE(SUM(monto), 0)::numeric
+            FROM pasivos
+            WHERE user_id = $1 AND fecha_vencimiento >= $2 AND fecha_vencimiento <= $3)
+           +
+           (SELECT COALESCE(SUM(monto), 0)::numeric
+            FROM suscripciones
+            WHERE user_id = $1 AND estado = 'ACTIVA'
+              AND proxima_renovacion >= $2 AND proxima_renovacion <= $3)
+         ) AS total`,
       [userId, monthStart, monthEnd]
     );
 
@@ -102,10 +135,17 @@ export class DashboardService {
     );
 
     const prevGastosResult = await pool.query(
-      `SELECT COALESCE(SUM(monto), 0)::numeric AS total
-       FROM movimientos
-       WHERE user_id = $1 AND tipo = 'GASTO'
-         AND fecha >= $2 AND fecha <= $3`,
+      `SELECT
+         (
+           (SELECT COALESCE(SUM(monto), 0)::numeric
+            FROM pasivos
+            WHERE user_id = $1 AND fecha_vencimiento >= $2 AND fecha_vencimiento <= $3)
+           +
+           (SELECT COALESCE(SUM(monto), 0)::numeric
+            FROM suscripciones
+            WHERE user_id = $1 AND estado = 'ACTIVA'
+              AND proxima_renovacion >= $2 AND proxima_renovacion <= $3)
+         ) AS total`,
       [userId, prevMonthStart, prevMonthEnd]
     );
 
@@ -159,8 +199,9 @@ export class DashboardService {
   }
 
   /**
-   * Los ingresos se toman de la tabla `activos` (donde se registran los
-   * ingresos del usuario) y los gastos de `movimientos` con tipo GASTO.
+   * Los ingresos se toman de la tabla `activos` y los gastos de la suma
+   * de `pasivos` (deudas/egresos del mes) + `suscripciones` activas con
+   * renovación en el mes consultado.
    */
   private async getMonthTotal(
     userId: number,
@@ -182,10 +223,17 @@ export class DashboardService {
     }
 
     const result = await pool.query(
-      `SELECT COALESCE(SUM(monto), 0)::numeric AS total
-       FROM movimientos
-       WHERE user_id = $1 AND tipo = 'GASTO'
-         AND fecha >= $2 AND fecha <= $3`,
+      `SELECT
+         (
+           (SELECT COALESCE(SUM(monto), 0)::numeric
+            FROM pasivos
+            WHERE user_id = $1 AND fecha_vencimiento >= $2 AND fecha_vencimiento <= $3)
+           +
+           (SELECT COALESCE(SUM(monto), 0)::numeric
+            FROM suscripciones
+            WHERE user_id = $1 AND estado = 'ACTIVA'
+              AND proxima_renovacion >= $2 AND proxima_renovacion <= $3)
+         ) AS total`,
       [userId, monthStart, monthEnd]
     );
     return Number(result.rows[0].total);
@@ -193,16 +241,28 @@ export class DashboardService {
 
   private async getPending(userId: number) {
     const result = await pool.query(
-      `SELECT id, nombre, monto, fecha_vencimiento,
+      `SELECT id, nombre, monto, fecha_vencimiento, recurrencia_id,
               (fecha_vencimiento - CURRENT_DATE)::int AS dias_restantes
        FROM pendientes
        WHERE user_id = $1 AND estado = 'PENDIENTE' AND fecha_vencimiento >= CURRENT_DATE
-       ORDER BY fecha_vencimiento ASC
-       LIMIT 5`,
+       ORDER BY fecha_vencimiento ASC, id ASC`,
       [userId]
     );
 
-    return result.rows.map((r: any) => ({
+    // Un pendiente recurrente se pre-genera en todos los meses, pero en el
+    // inicio solo debe verse el PRÓXIMO a vencer de cada tipo: al marcarlo
+    // pagado, la siguiente instancia del grupo pasa a ser la más próxima.
+    const vistos = new Set<string>();
+    const unicos: any[] = [];
+    for (const row of result.rows) {
+      const clave = row.recurrencia_id ?? `single-${row.id}`;
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+      unicos.push(row);
+      if (unicos.length >= 5) break;
+    }
+
+    return unicos.map((r: any) => ({
       id: r.id,
       nombre: r.nombre,
       monto: Number(r.monto),
@@ -216,7 +276,8 @@ export class DashboardService {
       `SELECT id, nombre, monto, proxima_renovacion,
               (proxima_renovacion - CURRENT_DATE)::int AS dias_restantes
        FROM suscripciones
-       WHERE user_id = $1 AND estado = 'ACTIVA' AND proxima_renovacion >= CURRENT_DATE
+       WHERE user_id = $1 AND estado = 'ACTIVA'
+         AND proxima_renovacion >= CURRENT_DATE
        ORDER BY proxima_renovacion ASC
        LIMIT 5`,
       [userId]
