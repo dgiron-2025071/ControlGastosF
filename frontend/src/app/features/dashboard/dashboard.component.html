@@ -4,16 +4,16 @@
   <header class="dash-header">
     <div class="dash-header-inner">
       <div class="dash-brand">
-        <span class="dash-logo">Control-Gastos</span>
+        <span class="dash-logo logo-logout" (click)="logout()">Control-Gastos</span>
       </div>
 
       <nav class="dash-nav">
         <a class="nav-link active">Inicio</a>
         <a class="nav-link" (click)="navigateTo('activos')">Activos</a>
-        <a class="nav-link" (click)="navigateTo('proximamente')">Pasivos</a>
-        <a class="nav-link" (click)="navigateTo('proximamente')">Pendientes</a>
-        <a class="nav-link" (click)="navigateTo('proximamente')">Suscripciones</a>
-        <a class="nav-link" (click)="navigateTo('proximamente')">Movimientos</a>
+        <a class="nav-link" (click)="navigateTo('pasivos')">Pasivos</a>
+        <a class="nav-link" (click)="navigateTo('pendientes')">Pendientes</a>
+        <a class="nav-link" (click)="navigateTo('suscripciones')">Suscripciones</a>
+        <a class="nav-link" (click)="navigateTo('movimientos')">Movimientos</a>
       </nav>
 
       <div class="dash-actions">
