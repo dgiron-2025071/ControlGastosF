@@ -19,4 +19,5 @@ export interface ResumenData {
   selectedYear: number;
   selectedMonth: number;
   years: ResumenYear[];
+  mayorPendiente?: { nombre: string; monto: number } | null;
 }
