@@ -57,6 +57,13 @@ CREATE TABLE IF NOT EXISTS pasivos (
 CREATE INDEX IF NOT EXISTS pasivos_user_id_idx ON pasivos (user_id);
 CREATE INDEX IF NOT EXISTS pasivos_user_estado_idx ON pasivos (user_id, estado);
 
+-- Permite agregar columnas a bases de datos ya existentes
+ALTER TABLE pasivos ADD COLUMN IF NOT EXISTS empresa VARCHAR(200);
+
+-- Vínculo entre un pasivo generado automáticamente y su pendiente de origen
+ALTER TABLE pasivos ADD COLUMN IF NOT EXISTS pendiente_id INTEGER REFERENCES pendientes(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS pasivos_pendiente_id_idx ON pasivos (pendiente_id);
+
 -- =========================================================
 -- PENDIENTES (pagos próximos / facturas por vencer)
 -- =========================================================
@@ -65,6 +72,8 @@ CREATE TABLE IF NOT EXISTS pendientes (
     user_id         INTEGER      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     nombre          VARCHAR(200) NOT NULL,
     monto           NUMERIC(12,2) NOT NULL CHECK (monto >= 0),
+    categoria       VARCHAR(100) NOT NULL DEFAULT 'General',
+    frecuencia      VARCHAR(30)  NOT NULL DEFAULT 'MENSUAL' CHECK (frecuencia IN ('UNA_VEZ', 'SEMANAL', 'QUINCENAL', 'MENSUAL', 'BIMESTRAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL')),
     fecha_vencimiento DATE         NOT NULL,
     estado          VARCHAR(20)  NOT NULL DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE', 'PAGADO', 'VENCIDO')),
     descripcion     TEXT,
@@ -73,6 +82,38 @@ CREATE TABLE IF NOT EXISTS pendientes (
 
 CREATE INDEX IF NOT EXISTS pendientes_user_id_idx ON pendientes (user_id);
 CREATE INDEX IF NOT EXISTS pendientes_user_fecha_idx ON pendientes (user_id, fecha_vencimiento);
+
+-- Permite agregar columnas a bases de datos ya existentes
+ALTER TABLE pendientes ADD COLUMN IF NOT EXISTS categoria VARCHAR(100) NOT NULL DEFAULT 'General';
+ALTER TABLE pendientes ADD COLUMN IF NOT EXISTS frecuencia VARCHAR(30) NOT NULL DEFAULT 'MENSUAL';
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'pendientes_frecuencia_check') THEN
+    ALTER TABLE pendientes ADD CONSTRAINT pendientes_frecuencia_check
+      CHECK (frecuencia IN ('UNA_VEZ', 'SEMANAL', 'QUINCENAL', 'MENSUAL', 'BIMESTRAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL'));
+  END IF;
+END $$;
+
+-- Grupo de recurrencia: mismo identificador para todas las repeticiones
+-- de un pendiente (permite borrarlas de una sola vez).
+ALTER TABLE pendientes ADD COLUMN IF NOT EXISTS recurrencia_id UUID;
+CREATE INDEX IF NOT EXISTS pendientes_recurrencia_id_idx ON pendientes (recurrencia_id);
+
+-- Indica si el pendiente es un gasto fijo.
+ALTER TABLE pendientes ADD COLUMN IF NOT EXISTS fijo BOOLEAN NOT NULL DEFAULT false;
+
+-- Permite dos tipos de pendiente:
+--  - MONTO_CONOCIDO: se registra con su monto (obligatorio).
+--  - RECORDATORIO:   gastos no fijos (luz, agua...), el monto es opcional.
+ALTER TABLE pendientes ALTER COLUMN monto DROP NOT NULL;
+ALTER TABLE pendientes ADD COLUMN IF NOT EXISTS tipo VARCHAR(20) NOT NULL DEFAULT 'MONTO_CONOCIDO';
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'pendientes_tipo_check') THEN
+    ALTER TABLE pendientes ADD CONSTRAINT pendientes_tipo_check
+      CHECK (tipo IN ('MONTO_CONOCIDO', 'RECORDATORIO'));
+  END IF;
+END $$;
 
 -- =========================================================
 -- SUSCRIPCIONES (cobros recurrentes)
@@ -109,3 +150,21 @@ CREATE TABLE IF NOT EXISTS movimientos (
 CREATE INDEX IF NOT EXISTS movimientos_user_id_idx ON movimientos (user_id);
 CREATE INDEX IF NOT EXISTS movimientos_user_fecha_idx ON movimientos (user_id, fecha);
 CREATE INDEX IF NOT EXISTS movimientos_user_tipo_fecha_idx ON movimientos (user_id, tipo, fecha);
+
+-- =========================================================
+-- MIGRACIONES IDEMPOTENTES
+-- =========================================================
+
+-- Permitir el ciclo de cobro "UNA_VEZ" en suscripciones.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'suscripciones_ciclo_cobro_check'
+  ) THEN
+    ALTER TABLE suscripciones DROP CONSTRAINT suscripciones_ciclo_cobro_check;
+  END IF;
+
+  ALTER TABLE suscripciones ADD CONSTRAINT suscripciones_ciclo_cobro_check
+    CHECK (ciclo_cobro IN ('UNA_VEZ', 'SEMANAL', 'QUINCENAL', 'MENSUAL', 'BIMESTRAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL'));
+END $$;
