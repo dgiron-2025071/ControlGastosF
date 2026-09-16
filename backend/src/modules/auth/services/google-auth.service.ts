@@ -3,18 +3,20 @@ import jwt from "jsonwebtoken";
 import { UserRepository } from "../models/user.repository";
 import { toPublicUser } from "../models/user.model";
 
-const rawClientId = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_ID_PLACEHOLDER = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+const DEFAULT_GOOGLE_CLIENT_ID =
+  "807712069315-m6pci1bsud78vkt8tmf4496ve7bg2d9n.apps.googleusercontent.com";
 
-function isGoogleClientConfigured(clientId: string): boolean {
-  return (
-    !!clientId &&
-    clientId !== GOOGLE_CLIENT_ID_PLACEHOLDER &&
-    !clientId.includes("YOUR_GOOGLE_CLIENT_ID")
-  );
+function resolveGoogleClientId(): string {
+  const configured = process.env.GOOGLE_CLIENT_ID || "";
+  const valid =
+    !!configured &&
+    configured !== GOOGLE_CLIENT_ID_PLACEHOLDER &&
+    !configured.includes("YOUR_GOOGLE_CLIENT_ID");
+  return valid ? configured : DEFAULT_GOOGLE_CLIENT_ID;
 }
 
-const googleClientId = isGoogleClientConfigured(rawClientId) ? rawClientId : "";
+const googleClientId = resolveGoogleClientId();
 const googleClient = new OAuth2Client(googleClientId);
 
 const userRepository = new UserRepository();
