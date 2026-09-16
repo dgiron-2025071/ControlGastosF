@@ -63,6 +63,16 @@ export class AuthService {
     });
   }
 
+  loginWithGoogle(idToken: string): Observable<LoginResponse> {
+    return this.http
+      .post<LoginResponse>(`${API_URL}/auth/google`, { idToken })
+      .pipe(
+        tap((response) => {
+          this.persistSession(response);
+        })
+      );
+  }
+
   private persistSession(response: LoginResponse): void {
     const expiry = this.decodeExpiry(response.token);
 
