@@ -3,8 +3,7 @@ import { Router } from "@angular/router";
 import { AuthService } from "./auth.service";
 import { ToastService } from "./toast.service";
 
-// TEMPORAL PARA PRUEBAS: 2 minutos de inactividad (antes 20). volver a 20 min.
-const IDLE_TIMEOUT_MS = 2 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const CHECK_INTERVAL_MS = 15 * 1000;
 // Renueva el token si le faltan menos de 5 minutos para expirar.
 const REFRESH_BEFORE_EXPIRY_MS = 5 * 60 * 1000;
@@ -68,6 +67,18 @@ export class SessionService {
     }
   }
 
+  /** Cierre de sesión voluntario desde la interfaz: limpia el estado, detiene el control de inactividad y va al login. */
+  logout(): void {
+    if (!this.authService.getToken()) {
+      this.stop();
+      return;
+    }
+
+    this.stop();
+    this.authService.logout();
+    this.ngZone.run(() => this.router.navigate(["/login"]));
+  }
+
   /** Cierra la sesión y notifica al usuario. Usado por inactividad, expiración de JWT o un 401 del backend. */
   expireSession(reason: "idle" | "token" | "unauthorized" = "token"): void {
     if (!this.authService.getToken()) {
@@ -84,7 +95,8 @@ export class SessionService {
           ? "Cerramos tu sesión por inactividad prolongada."
           : undefined;
 
-      this.toastService.error("Su sesión ha expirado. Vuelva a iniciar sesión.", detail);
+      // Aviso persistente: solo desaparece cuando el usuario hace clic en cerrar.
+      this.toastService.persistent("Su sesión expiró. Debe iniciar sesión de nuevo.", detail);
       this.router.navigate(["/login"]);
     });
   }
