@@ -201,6 +201,11 @@
 .overview-value.positive { color: #60a95e; }
 .overview-value.negative { color: #b62f6c; }
 
+.overview-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 /* GRÁFICA POR AÑO */
 .years-list {
   display: flex;
