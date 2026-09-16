@@ -31,6 +31,11 @@ export class ToastService {
     this.show(title, "error", detail, 6000);
   }
 
+  /** El aviso permanece visible hasta que el usuario lo cierra manualmente. */
+  persistent(title: string, detail?: string): void {
+    this.show(title, "error", detail, 0);
+  }
+
   dismiss(id: number): void {
     this.toasts.update((current) => current.filter((t) => t.id !== id));
   }
