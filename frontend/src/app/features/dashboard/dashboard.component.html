@@ -1,0 +1,238 @@
+<div class="dashboard-shell">
+  <canvas class="shader-bg" id="shader-canvas"></canvas>
+
+  <header class="dash-header">
+    <div class="dash-header-inner">
+      <div class="dash-brand">
+        <span class="dash-logo logo-logout" (click)="logout()">Control-Gastos</span>
+      </div>
+
+      <nav class="dash-nav">
+        <a class="nav-link active">Inicio</a>
+        <a class="nav-link" (click)="navigateTo('activos')">Activos</a>
+        <a class="nav-link" (click)="navigateTo('pasivos')">Pasivos</a>
+        <a class="nav-link" (click)="navigateTo('pendientes')">Pendientes</a>
+        <a class="nav-link" (click)="navigateTo('suscripciones')">Suscripciones</a>
+        <a class="nav-link" (click)="navigateTo('movimientos')">Movimientos</a>
+      </nav>
+
+      <div class="dash-actions">
+        <button class="btn-add-income" (click)="navigateTo('activos')">
+          <span class="icon-sm">+</span>
+          Ingresos
+        </button>
+        <button class="btn-mobile-menu" (click)="mobileMenuOpen = !mobileMenuOpen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash-main">
+    <div class="dash-title-row">
+      <div>
+        <h1 class="dash-title">Resumen Ejecutivo</h1>
+        <p class="dash-subtitle">Vista general de su salud financiera.</p>
+      </div>
+      <div class="month-selector">
+        <button class="month-btn" (click)="previousMonth()" aria-label="Mes anterior">
+          <span class="icon-xs">&lsaquo;</span>
+        </button>
+        <span class="month-label">{{ monthLabel }}</span>
+        <button class="month-btn" (click)="nextMonth()" aria-label="Mes siguiente">
+          <span class="icon-xs">&rsaquo;</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card card-highlight">
+        <div class="card-highlight-bg"></div>
+        <div class="card-content">
+          <p class="card-big-value">{{ formatCurrency(summary?.totalBalance ?? 0) }}</p>
+          <p class="card-trend positive" [class.negative]="(summary?.percentChange ?? 0) < 0">
+            <span class="icon-xs">{{ (summary?.percentChange ?? 0) >= 0 ? '↑' : '↓' }}</span>
+            {{ (summary?.percentChange ?? 0) > 0 ? '+' : '' }}{{ summary?.percentChange ?? 0 }}% este mes
+          </p>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="card-header">
+          <h3 class="card-label">Total Activos</h3>
+          <div class="card-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <line x1="4" y1="21" x2="4" y2="14" />
+              <line x1="10" y1="21" x2="10" y2="7" />
+              <line x1="16" y1="21" x2="16" y2="10" />
+              <line x1="21" y1="21" x2="21" y2="3" />
+            </svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="card-value">{{ formatCurrency(summary?.totalActivos ?? 0) }}</p>
+          <p class="card-desc">Liquidez e Inversiones</p>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="card-header">
+          <h3 class="card-label">Total Pasivos</h3>
+          <div class="card-icon magenta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="5" width="20" height="14" rx="2" />
+              <line x1="2" y1="10" x2="22" y2="10" />
+            </svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="card-value">{{ formatCurrency(summary?.totalPasivos ?? 0) }}</p>
+          <p class="card-desc">Creditos y Deudas</p>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="card-header">
+          <h3 class="card-label">Balance del Mes</h3>
+          <div class="card-icon neutral">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 3 21 8 16 13" />
+              <line x1="21" y1="8" x2="3" y2="8" />
+              <polyline points="8 21 3 16 8 11" />
+              <line x1="3" y1="16" x2="21" y2="16" />
+            </svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="card-value">
+            {{ (summary?.monthBalance ?? 0) >= 0 ? '+' : '' }}{{ formatCurrency(summary?.monthBalance ?? 0) }}
+          </p>
+          <div class="balance-bar">
+            <div class="balance-bar-green"
+                 [style.width.%]="(summary?.monthBalance ?? 0) >= 0 ? 100 : 0"></div>
+            <div class="balance-bar-magenta"
+                 [style.width.%]="(summary?.monthBalance ?? 0) < 0 ? 100 : 0"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-and-side">
+      <div class="chart-panel">
+        <div class="chart-header">
+          <h2 class="section-title">Ingresos vs Gastos</h2>
+          <button class="link-btn" (click)="navigateTo('resumen')">
+            Reporte Completo
+            <span class="icon-xs">&rarr;</span>
+          </button>
+        </div>
+
+        <div class="chart-area">
+          <div class="chart-y-axis">
+            <span>{{ formatCurrencyShort(chartMaxValue) }}</span>
+            <span>{{ formatCurrencyShort(chartMaxValue * 0.75) }}</span>
+            <span>{{ formatCurrencyShort(chartMaxValue * 0.5) }}</span>
+            <span>{{ formatCurrencyShort(chartMaxValue * 0.25) }}</span>
+            <span>$0</span>
+          </div>
+
+          <div class="chart-bars-container">
+            <div class="chart-grid-lines">
+              <div class="grid-line"></div>
+              <div class="grid-line"></div>
+              <div class="grid-line"></div>
+              <div class="grid-line"></div>
+              <div class="grid-line last"></div>
+            </div>
+
+            <div class="chart-bars">
+              @for (point of chartData; track point.monthNum) {
+                <div class="bar-group" [class.current]="isCurrentMonth(point)">
+                  <div class="bars-wrapper">
+                    <div class="bar bar-green"
+                         [style.height.%]="barHeight(point.ingresos)">
+                    </div>
+                    <div class="bar bar-magenta"
+                         [style.height.%]="barHeight(point.gastos)">
+                    </div>
+                  </div>
+                  <span class="bar-label"
+                        [class.current-label]="isCurrentMonth(point)">
+                    {{ point.month }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-legend">
+          <div class="legend-item">
+            <div class="legend-dot green"></div>
+            <span>Ingresos</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot magenta"></div>
+            <span>Gastos</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-panels">
+        <div class="side-panel">
+          <div class="panel-header">
+            <svg class="icon-orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <h3 class="panel-title">Pendientes proximos</h3>
+          </div>
+          <ul class="panel-list">
+            @if (pendingItems.length === 0) {
+              <li class="empty-msg">No hay pendientes proximos</li>
+            }
+            @for (item of pendingItems; track item.id) {
+              <li class="panel-item orange-border">
+                <div>
+                  <p class="item-name">{{ item.nombre }}</p>
+                  <p class="item-sub">{{ getDayLabel(item.diasRestantes) }}</p>
+                </div>
+                <span class="item-amount">{{ formatCurrencyNegative(item.monto) }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <div class="side-panel">
+          <div class="panel-header">
+            <svg class="icon-magenta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+            <h3 class="panel-title">Renovaciones</h3>
+          </div>
+          <ul class="panel-list">
+            @if (subscriptionItems.length === 0) {
+              <li class="empty-msg">No hay renovaciones proximas</li>
+            }
+            @for (item of subscriptionItems; track item.id) {
+              <li class="panel-item magenta-border">
+                <div>
+                  <p class="item-name">{{ item.nombre }}</p>
+                  <p class="item-sub">{{ getRenewalLabel(item.diasRestantes) }}</p>
+                </div>
+                <span class="item-amount">{{ formatCurrencyNegative(item.monto) }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

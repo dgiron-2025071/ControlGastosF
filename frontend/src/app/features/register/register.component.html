@@ -1,0 +1,111 @@
+<div class="shell">
+  <div class="shell-grid" aria-hidden="true"></div>
+  <div class="shell-blob shell-blob-teal" aria-hidden="true"></div>
+  <div class="shell-blob shell-blob-magenta" aria-hidden="true"></div>
+  <div class="shell-blob shell-blob-amber" aria-hidden="true"></div>
+
+  <header class="shell-topbar">
+    <div class="shell-brand">
+      <img src="assets/logo.jpg" alt="Control-Gastos" />
+      <span>Control-Gastos</span>
+    </div>
+    <span class="shell-badge">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      Acceso seguro
+    </span>
+  </header>
+
+  <main class="shell-main">
+    <div class="register-card glass-card">
+      <span class="card-eyebrow">Nueva cuenta</span>
+      <h1 class="card-title">Crea tu cuenta</h1>
+      <p class="card-subtitle">Regístrate para empezar a controlar tus gastos</p>
+
+      <form
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+        class="pill-form"
+        novalidate
+      >
+        <div class="pill-field" [class.pill-invalid]="name.touched && name.invalid">
+          <svg class="pill-icon" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M5 19c1.2-3.4 4-5 7-5s5.8 1.6 7 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <input
+            id="name"
+            type="text"
+            formControlName="name"
+            autocomplete="name"
+            placeholder="Nombre completo"
+          />
+        </div>
+        @if (name.touched && name.invalid) {
+          <span class="pill-error">El nombre es obligatorio.</span>
+        }
+
+        <div class="pill-field" [class.pill-invalid]="email.touched && email.invalid">
+          <svg class="pill-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M3 6.5A2.5 2.5 0 015.5 4h13A2.5 2.5 0 0121 6.5v11a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 17.5v-11z" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M4 6.5l8 6 8-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            placeholder="Correo electrónico"
+          />
+        </div>
+        @if (email.touched && email.invalid) {
+          <span class="pill-error">Ingresa un correo electrónico válido.</span>
+        }
+
+        <div class="pill-field" [class.pill-invalid]="password.touched && password.invalid">
+          <svg class="pill-icon" viewBox="0 0 24 24" fill="none">
+            <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M8 10.5V7.8a4 4 0 118 0v2.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="password"
+            id="password"
+            formControlName="password"
+            autocomplete="new-password"
+            placeholder="Contraseña (mínimo 6 caracteres)"
+          />
+        </div>
+        @if (password.touched && password.invalid) {
+          <span class="pill-error">Mínimo 6 caracteres.</span>
+        }
+
+        @if (errorMessage()) {
+          <div class="form-alert" role="alert">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 8v5M12 16h.01M12 3l9 16H3L12 3z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
+
+        @if (successMessage()) {
+          <div class="form-alert form-alert-success" role="status">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>{{ successMessage() }}</span>
+          </div>
+        }
+
+        <button type="submit" class="pill-submit" [disabled]="loading()">
+          @if (loading()) {
+            <span class="pill-spinner" aria-hidden="true"></span>
+            <span>Creando cuenta...</span>
+          } @else {
+            <span>Registrarse</span>
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          }
+        </button>
+
+        <button type="button" class="pill-outline" routerLink="/login" [disabled]="loading()">
+          Ya tengo cuenta, iniciar sesión
+        </button>
+      </form>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,44 @@
+<div class="shell">
+  <div class="shell-grid" aria-hidden="true"></div>
+  <div class="shell-blob shell-blob-teal" aria-hidden="true"></div>
+  <div class="shell-blob shell-blob-magenta" aria-hidden="true"></div>
+  <div class="shell-blob shell-blob-amber" aria-hidden="true"></div>
+
+  <header class="shell-topbar">
+    <div class="shell-brand">
+      <img src="assets/logo.png" alt="Control-Gastos" />
+      <span>Control-Gastos</span>
+    </div>
+    <button type="button" class="shell-badge shell-badge-btn" (click)="logout()">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 17l5-5-5-5M20 12H9M12 19a7 7 0 110-14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Cerrar sesión
+    </button>
+  </header>
+
+  <main class="shell-main">
+    <div class="maintenance-card glass-card">
+      <div class="status-ring-wrap">
+        <span class="status-ring"></span>
+        <img src="assets/logo.png" alt="Control-Gastos" class="maintenance-mascot" />
+      </div>
+
+      @if (user) {
+        <p class="maintenance-greeting">Hola, {{ user.name }}</p>
+      }
+
+      <h1 class="maintenance-title">Estamos trabajando en el control de gastos...</h1>
+      <p class="maintenance-text">Vuelva pronto.</p>
+
+      <div class="maintenance-progress">
+        <span class="progress-dot dot-teal"></span>
+        <span class="progress-dot dot-magenta"></span>
+        <span class="progress-dot dot-green"></span>
+        <span class="progress-dot dot-amber"></span>
+      </div>
+
+      <button type="button" class="pill-outline" (click)="logout()">
+        Cerrar sesión
+      </button>
+    </div>
+  </main>
+</div>

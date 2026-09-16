@@ -1,0 +1,120 @@
+.shell-badge-btn {
+  border: 1px solid rgba(46, 196, 198, 0.25);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.shell-badge-btn:hover {
+  background: rgba(46, 196, 198, 0.18);
+  border-color: var(--cg-teal);
+}
+
+.maintenance-card {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  padding: 44px 36px 38px;
+  border-radius: 26px;
+  text-align: center;
+  animation: cg-fade-up 0.45s ease;
+}
+
+.status-ring-wrap {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--cg-teal);
+  opacity: 0.6;
+}
+
+.maintenance-mascot {
+  width: 78px;
+  height: auto;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.45));
+}
+
+.maintenance-greeting {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--cg-teal);
+  font-weight: 700;
+}
+
+.maintenance-title {
+  margin: 0 0 8px;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: -0.2px;
+}
+
+.maintenance-text {
+  margin: 0 0 24px;
+  font-size: 13.5px;
+  color: var(--cg-muted);
+}
+
+.maintenance-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.progress-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  opacity: 0.9;
+}
+
+.dot-teal { background: var(--cg-teal); }
+.dot-magenta { background: var(--cg-magenta); }
+.dot-green { background: var(--cg-green); }
+.dot-amber { background: var(--cg-amber); }
+
+.pill-outline {
+  padding: 12px 30px;
+  border-radius: 999px;
+  border: 1px solid var(--cg-border);
+  background: transparent;
+  color: var(--cg-white);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pill-outline:hover {
+  border-color: var(--cg-danger);
+  background: rgba(239, 77, 90, 0.1);
+}
+
+@media (max-width: 420px) {
+  .shell-topbar {
+    padding: 20px 20px;
+  }
+
+  .shell-badge span {
+    display: none;
+  }
+
+  .maintenance-card {
+    padding: 36px 26px 32px;
+  }
+}

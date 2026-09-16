@@ -1,0 +1,366 @@
+<div class="activos-shell">
+  <canvas class="shader-bg" id="activos-shader-canvas"></canvas>
+
+  <header class="act-header">
+    <div class="act-header-inner">
+      <div class="act-brand">
+        <span class="act-logo logo-logout" (click)="logout()">Control-Gastos</span>
+      </div>
+
+      <nav class="act-nav">
+        <a class="nav-link" (click)="navigateTo('dashboard')">Inicio</a>
+        <a class="nav-link active">Activos</a>
+        <a class="nav-link" (click)="navigateTo('pasivos')">Pasivos</a>
+        <a class="nav-link" (click)="navigateTo('pendientes')">Pendientes</a>
+        <a class="nav-link" (click)="navigateTo('suscripciones')">Suscripciones</a>
+        <a class="nav-link" (click)="navigateTo('movimientos')">Movimientos</a>
+      </nav>
+
+      <div class="act-actions">
+        <button class="btn-add-income" (click)="openCreateModal()">
+          <span class="icon-plus">+</span>
+          Ingresos
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="act-main">
+    <header class="act-title-row">
+      <div>
+        <h1 class="act-title">Ingresos</h1>
+        <p class="act-subtitle">Gestión detallada de sus fuentes de ingreso.</p>
+      </div>
+      <div class="month-selector">
+        <button class="month-btn" (click)="previousMonth()" aria-label="Mes anterior">
+          <span class="icon-xs">&lsaquo;</span>
+        </button>
+        <span class="month-label">{{ monthLabel }}</span>
+        <button class="month-btn" (click)="nextMonth()" aria-label="Mes siguiente">
+          <span class="icon-xs">&rsaquo;</span>
+        </button>
+      </div>
+    </header>
+
+    @if (loading()) {
+      <div class="loading-state">Cargando ingresos...</div>
+    }
+
+    @if (!loading()) {
+      <!-- Métricas -->
+      <section class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Total Mensual</span>
+            <div class="metric-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value">{{ formatCurrency(stats()?.totalMensual ?? 0) }}</div>
+          <div class="metric-desc">{{ stats()?.count ?? 0 }} registro(s)</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Promedio / Ingreso</span>
+            <div class="metric-icon neutral">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="18" x2="14" y2="18" />
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value">{{ formatCurrency(stats()?.promedio ?? 0) }}</div>
+          <div class="metric-desc">Por cada registro del mes</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Vs. Mes Anterior</span>
+            <div class="metric-icon" [class.green-bg]="pctChange() >= 0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value-trend" [class.positive]="pctChange() >= 0"
+               [class.negative]="pctChange() < 0">
+            {{ pctChange() > 0 ? '+' : '' }}{{ pctChange() }}%
+          </div>
+          <div class="metric-desc">
+            {{ formatDelta(diferenciaMesAnterior()) }} vs
+            {{ formatCurrency(totalMesAnterior()) }}
+          </div>
+        </div>
+      </section>
+
+      <!-- Filtros -->
+      @if (showFilters()) {
+        <section class="filters-panel">
+          <div class="filter-field">
+            <label>Buscar</label>
+            <input type="text" placeholder="Descripción, empresa, origen..."
+                   [value]="filters().texto"
+                   (input)="setFilter('texto', $any($event.target).value)" />
+          </div>
+          <div class="filter-field">
+            <label>Desde</label>
+            <input type="date"
+                   [value]="filters().fechaDesde"
+                   (input)="setFilter('fechaDesde', $any($event.target).value)" />
+          </div>
+          <div class="filter-field">
+            <label>Hasta</label>
+            <input type="date"
+                   [value]="filters().fechaHasta"
+                   (input)="setFilter('fechaHasta', $any($event.target).value)" />
+          </div>
+          <div class="filter-field">
+            <label>Origen</label>
+            <select [value]="filters().origen" (change)="setFilter('origen', $any($event.target).value)">
+              <option value="">Todos</option>
+              @for (origen of origenes; track origen) {
+                <option [value]="origen">{{ origen }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-field">
+            <label>Monto mín.</label>
+            <input type="number" min="0" step="0.01" placeholder="0.00"
+                   [value]="filters().montoMin ?? ''"
+                   (input)="setFilter('montoMin', $any($event.target).value)" />
+          </div>
+          <div class="filter-field">
+            <label>Monto máx.</label>
+            <input type="number" min="0" step="0.01" placeholder="0.00"
+                   [value]="filters().montoMax ?? ''"
+                   (input)="setFilter('montoMax', $any($event.target).value)" />
+          </div>
+          <div class="filter-actions">
+            @if (activeFilterCount() > 0) {
+              <button class="btn-clear-filters" (click)="clearFilters()">Limpiar filtros</button>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- Tabla -->
+      <section class="table-card">
+        <div class="table-head">
+          <h3 class="table-title">Registro de Ingresos</h3>
+          <button class="btn-filter" (click)="toggleFilters()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filtrar
+            @if (activeFilterCount() > 0) {
+              <span class="filter-badge">{{ activeFilterCount() }}</span>
+            }
+          </button>
+        </div>
+
+        @if (editMode()) {
+          <div class="edit-hint">Modo edición activo. Modifica los campos y usa "Guardar" en cada fila.</div>
+        }
+
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Fecha</th>
+                <th scope="col">Descripción</th>
+                <th scope="col">Empresa</th>
+                <th scope="col">Origen</th>
+                <th scope="col" class="text-right">Monto</th>
+                <th scope="col" class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (filteredItems().length === 0) {
+                <tr>
+                  <td colspan="6" class="empty-cell">
+                    {{ items().length === 0 ? 'No hay ingresos registrados en este mes. Presiona "+ Ingresos" para agregar uno.' : 'Ningún ingreso coincide con los filtros aplicados.' }}
+                  </td>
+                </tr>
+              }
+              @for (item of filteredItems(); track item.id) {
+                @if (editMode()) {
+                  <tr class="row-editing">
+                    <td>
+                      <input type="date" class="cell-input"
+                             [(ngModel)]="editCopies[item.id].fecha" />
+                    </td>
+                    <td>
+                      <input type="text" class="cell-input" placeholder="Descripción"
+                             [(ngModel)]="editCopies[item.id].nombre" />
+                    </td>
+                    <td>
+                      <input type="text" class="cell-input" placeholder="Empresa"
+                             [(ngModel)]="editCopies[item.id].empresa" />
+                    </td>
+                    <td>
+                      <select class="cell-input"
+                              [(ngModel)]="editCopies[item.id].categoria">
+                        @for (origen of origenes; track origen) {
+                          <option [value]="origen">{{ origen }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td class="text-right">
+                      <input type="number" min="0" step="0.01" class="cell-input cell-input-amount"
+                             [(ngModel)]="editCopies[item.id].monto" />
+                    </td>
+                    <td class="text-right">
+                      <div class="row-actions">
+                        <button class="icon-btn save"
+                                [disabled]="saving() || arching.has(item.id)"
+                                (click)="saveEdit(item.id)"
+                                title="Guardar cambios">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn cancel"
+                                [disabled]="saving() || arching.has(item.id)"
+                                (click)="cancelEdit(item.id)"
+                                title="Cancelar edición">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M6 6l12 12M18 6L6 18" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn danger"
+                                [disabled]="saving() || arching.has(item.id)"
+                                (click)="deleteActivo(item.id, item.nombre)"
+                                title="Eliminar ingreso">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                } @else {
+                  <tr>
+                    <td class="cell-fecha">{{ formatFecha(item.fecha) }}</td>
+                    <td class="cell-nombre">{{ item.nombre }}</td>
+                    <td class="cell-empresa">{{ item.empresa || '—' }}</td>
+                    <td>
+                      <span class="origen-badge" [class]="origenClass(item.categoria)">
+                        {{ item.categoria }}
+                      </span>
+                    </td>
+                    <td class="text-right cell-monto">{{ formatCurrency(item.monto) }}</td>
+                    <td class="text-right">
+                      <div class="row-actions">
+                        <button class="icon-btn" (click)="startEditingRow(item.id)" title="Editar">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn danger"
+                                [disabled]="arching.has(item.id)"
+                                (click)="deleteActivo(item.id, item.nombre)"
+                                title="Eliminar">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          Mostrando {{ filteredItems().length }} de {{ items().length }} registro(s)
+          @if (activeFilterCount() > 0) {
+            <span class="footer-filtered">· filtrados</span>
+          }
+        </div>
+      </section>
+
+      <!-- Botones inferiores -->
+      <div class="bottom-actions">
+        <button class="btn-outline" (click)="toggleEditMode()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+          {{ editMode() ? 'Terminar edición' : 'Editar ingresos' }}
+        </button>
+        <button class="btn-primary" (click)="openCreateModal()">
+          <span class="icon-plus">+</span>
+          Nuevo ingreso
+        </button>
+      </div>
+    }
+  </main>
+
+  <!-- Modal de nuevo ingreso -->
+  @if (showCreateModal()) {
+    <div class="modal-backdrop" (click)="closeCreateModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-head">
+          <h2 class="modal-title">Nuevo ingreso</h2>
+          <button class="icon-btn" (click)="closeCreateModal()" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+
+        <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
+          <div class="modal-grid">
+            <div class="form-field full">
+              <label>Descripción *</label>
+              <input type="text" formControlName="nombre" placeholder="Ej. Salario quincenal" />
+            </div>
+            <div class="form-field">
+              <label>Fecha *</label>
+              <input type="date" formControlName="fecha" />
+            </div>
+            <div class="form-field">
+              <label>Monto (Q) *</label>
+              <input type="number" min="0.01" step="0.01" formControlName="monto" placeholder="0.00" />
+            </div>
+            <div class="form-field">
+              <label>Empresa</label>
+              <input type="text" formControlName="empresa" placeholder="Ej. TechCorp Inc." />
+            </div>
+            <div class="form-field">
+              <label>Origen</label>
+              <select formControlName="categoria">
+                @for (origen of origenes; track origen) {
+                  <option [value]="origen">{{ origen }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-field full">
+              <label>Nota</label>
+              <input type="text" formControlName="descripcion" placeholder="Detalle adicional (opcional)" />
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-outline" (click)="closeCreateModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" [disabled]="saving() || createForm.invalid">
+              @if (saving()) {
+                <span class="spinner"></span>
+                Guardando...
+              } @else {
+                Registrar ingreso
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

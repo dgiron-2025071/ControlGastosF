@@ -1,0 +1,150 @@
+<div class="resumen-shell">
+  <canvas class="shader-bg" id="resumen-shader-canvas"></canvas>
+
+  <header class="res-header">
+    <div class="res-header-inner">
+      <div class="res-brand">
+        <span class="res-logo logo-logout" (click)="logout()">Control-Gastos</span>
+      </div>
+
+      <nav class="res-nav">
+        <a class="nav-link" (click)="navigateTo('dashboard')">Inicio</a>
+        <a class="nav-link" (click)="navigateTo('activos')">Activos</a>
+        <a class="nav-link" (click)="navigateTo('proximamente')">Pasivos</a>
+        <a class="nav-link" (click)="navigateTo('proximamente')">Pendientes</a>
+        <a class="nav-link" (click)="navigateTo('proximamente')">Suscripciones</a>
+        <a class="nav-link" (click)="navigateTo('proximamente')">Movimientos</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="res-main">
+    <header class="res-title-row">
+      <div>
+        <h1 class="res-title">Resumen Completo</h1>
+        <p class="res-subtitle">Gráfica por año con el resumen de cada mes.</p>
+      </div>
+      <div class="period-selector">
+        <select class="period-select"
+                [ngModel]="currentMonth"
+                (ngModelChange)="onMonthSelected($event)"
+                [ngModelOptions]="{ standalone: true }"
+                aria-label="Mes">
+          @for (m of monthOptions; track $index) {
+            <option [value]="$index + 1">{{ m }}</option>
+          }
+        </select>
+        <select class="period-select"
+                [ngModel]="currentYear"
+                (ngModelChange)="onYearSelected($event)"
+                [ngModelOptions]="{ standalone: true }"
+                aria-label="Año">
+          @for (y of yearOptions(); track $index) {
+            <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </div>
+    </header>
+
+    @if (loading()) {
+      <div class="loading-state">Cargando resumen completo...</div>
+    }
+
+    @if (!loading() && data(); as resumen) {
+      <!-- Resumen general -->
+      <section class="overview-grid">
+        <div class="overview-card">
+          <span class="overview-label">Ingresos del año</span>
+          <span class="overview-value">{{ formatCurrency(ingresosAnio(currentYear)) }}</span>
+        </div>
+        <div class="overview-card">
+          <span class="overview-label">Gastos del año</span>
+          <span class="overview-value">{{ formatCurrency(gastosAnio(currentYear)) }}</span>
+        </div>
+        <div class="overview-card">
+          <span class="overview-label">Balance del año</span>
+          <span class="overview-value" [class.positive]="balanceAnio(currentYear) >= 0"
+                [class.negative]="balanceAnio(currentYear) < 0">
+            {{ balanceAnio(currentYear) >= 0 ? '+' : '' }}{{ formatCurrency(balanceAnio(currentYear)) }}
+          </span>
+        </div>
+        <div class="overview-card">
+          <span class="overview-label">Mayor pendiente del mes ({{ monthLabel }})</span>
+          <span class="overview-value">
+            {{ mayorPendienteMes() ? formatCurrency(mayorPendienteMes()!.monto) : '—' }}
+          </span>
+          <span class="overview-desc">{{ mayorPendienteMes()?.nombre ?? 'Sin pendientes en el mes' }}</span>
+        </div>
+      </section>
+
+      <!-- Gráfica por año -->
+      <section class="years-list">
+        @for (year of resumen.years; track year.year) {
+          <div class="year-panel" [class.year-selected]="isCurrentYear(year.year)">
+            <div class="year-head">
+              <button class="year-title-btn" (click)="yearSelected(year.year)">
+                {{ year.year }}
+                @if (isCurrentYear(year.year)) {
+                  <span class="year-current">año actual</span>
+                }
+              </button>
+              <div class="year-totals">
+                <span class="total-item total-in">Q{{ year.totalIngresos.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                <span class="total-item total-ex">Q{{ year.totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+                <span class="total-item total-bal" [class.positive]="year.balance >= 0" [class.negative]="year.balance < 0">
+                  {{ year.balance >= 0 ? '+' : '' }}Q{{ year.balance.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="year-chart">
+              <div class="chart-y-axis">
+                <span>{{ formatCurrencyCompact(maxValue()) }}</span>
+                <span>{{ formatCurrencyCompact(maxValue() * 0.75) }}</span>
+                <span>{{ formatCurrencyCompact(maxValue() * 0.5) }}</span>
+                <span>{{ formatCurrencyCompact(maxValue() * 0.25) }}</span>
+                <span>Q0</span>
+              </div>
+
+              <div class="chart-area">
+                <div class="chart-grid-lines">
+                  <div class="grid-line"></div>
+                  <div class="grid-line"></div>
+                  <div class="grid-line"></div>
+                  <div class="grid-line"></div>
+                  <div class="grid-line last"></div>
+                </div>
+
+                <div class="chart-bars">
+                  @for (month of year.meses; track month.monthNum) {
+                    <div class="bar-group" [class.bar-selected]="isSelectedMonth(year.year, month)"
+                         [title]="month.mes + ' · Ingresos: ' + formatCurrency(month.ingresos) + ' · Gastos: ' + formatCurrency(month.gastos)">
+                      <div class="bar-column">
+                        <div class="bar bar-green" [style.height.%]="barHeight(month.ingresos)" [class.empty-bar]="month.ingresos === 0"></div>
+                        <div class="bar bar-magenta" [style.height.%]="barHeight(month.gastos)" [class.empty-bar]="month.gastos === 0"></div>
+                      </div>
+                      <span class="bar-label" [class.current-label]="isSelectedMonth(year.year, month)">
+                        {{ month.mesCorto }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div class="chart-legend">
+              <div class="legend-item">
+                <div class="legend-dot green"></div>
+                <span>Ingresos</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot magenta"></div>
+                <span>Gastos</span>
+              </div>
+            </div>
+          </div>
+        }
+      </section>
+    }
+  </main>
+</div>
