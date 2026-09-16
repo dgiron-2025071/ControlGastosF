@@ -77,7 +77,6 @@ button {
   filter: blur(95px);
   pointer-events: none;
   z-index: 0;
-  animation: cg-drift 12s ease-in-out infinite;
 }
 
 .shell-blob-teal {
@@ -200,4 +199,9 @@ button {
   0% { transform: scale(0.94); opacity: 0.9; }
   70% { transform: scale(1.35); opacity: 0; }
   100% { transform: scale(1.35); opacity: 0; }
+}
+
+.logo-logout {
+  cursor: pointer;
+  user-select: none;
 }
