@@ -30,7 +30,6 @@
   filter: blur(95px);
   pointer-events: none;
   z-index: 0;
-  animation: cg-drift 12s ease-in-out infinite;
 }
 
 .shell-blob-teal {
@@ -142,7 +141,6 @@
   border-radius: 50%;
   border: 2px solid var(--cg-teal);
   opacity: 0.6;
-  animation: cg-pulse-ring 2.4s ease-out infinite;
 }
 
 .mascot-img {
