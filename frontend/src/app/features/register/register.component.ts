@@ -42,6 +42,8 @@ export class RegisterComponent {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
+    if (this.loading()) return;
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
