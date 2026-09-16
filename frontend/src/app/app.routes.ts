@@ -43,11 +43,35 @@ export const routes: Routes = [
       ),
   },
   {
-    path: "proximamente",
+    path: "pasivos",
     canActivate: [authGuard],
     loadComponent: () =>
-      import("./features/proximamente/proximamente.component").then(
-        (m) => m.ProximamenteComponent
+      import("./features/pasivos/pasivos.component").then(
+        (m) => m.PasivosComponent
+      ),
+  },
+  {
+    path: "pendientes",
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import("./features/pendientes/pendientes.component").then(
+        (m) => m.PendientesComponent
+      ),
+  },
+  {
+    path: "suscripciones",
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import("./features/suscripciones/suscripciones.component").then(
+        (m) => m.SuscripcionesComponent
+      ),
+  },
+  {
+    path: "movimientos",
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import("./features/movimientos/movimientos.component").then(
+        (m) => m.MovimientosComponent
       ),
   },
   {
